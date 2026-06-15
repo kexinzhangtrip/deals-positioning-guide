@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A2UI 组件分层架构 — 训练参考指南</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            line-height: 1.8;
+            color: #1a1a2e;
+            background: #f8f9fc;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 60px 40px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            padding: 50px 40px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #e8f4fd 0%, #d6ecfa 40%, #b8dcf8 100%);
+            color: #1a3a5c;
+        }
+
+        header h1 {
+            font-size: 2.2em;
+            font-weight: 700;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+
+        header p {
+            font-size: 1.05em;
+            color: #2a5078;
+            max-width: 640px;
+            margin: 0 auto;
+        }
+
+        .toc {
+            background: white;
+            border-radius: 16px;
+            padding: 28px 32px;
+            margin-bottom: 56px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+            border: 1px solid #eee;
+        }
+
+        .toc h3 { margin-top: 0; margin-bottom: 12px; color: #0f3460; }
+        .toc ol { padding-left: 20px; }
+        .toc li { padding: 3px 0; color: #555; font-size: 0.95em; }
+
+        .section { margin-bottom: 56px; }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .section-number {
+            width: 34px;
+            height: 34px;
+            background: #0f3460;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85em;
+            flex-shrink: 0;
+        }
+
+        h2 { font-size: 1.45em; font-weight: 700; color: #1a1a2e; }
+        h3 { font-size: 1.15em; font-weight: 600; color: #16213e; margin-bottom: 12px; margin-top: 24px; }
+        h4 { font-size: 1em; font-weight: 600; color: #0f3460; margin-bottom: 8px; }
+        p { margin-bottom: 14px; color: #333; }
+
+        .card {
+            background: white;
+            border-radius: 14px;
+            padding: 26px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+            border: 1px solid #eee;
+        }
+
+        .card-accent { border-left: 4px solid #0f3460; }
+        .card-blue { border-left: 4px solid #3498db; background: #f8fbff; }
+        .card-success { border-left: 4px solid #2ecc71; background: #f8fff8; }
+        .card-warning { border-left: 4px solid #f39c12; background: #fffcf5; }
+        .card-purple { border-left: 4px solid #9b59b6; background: #faf8ff; }
+
+        table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 0.9em; }
+        th, td { padding: 11px 14px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f5f7fa; font-weight: 600; color: #1a1a2e; }
+        tr:hover { background: #fafbfd; }
+
+        .code-block {
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 22px 26px;
+            color: #eee;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.82em;
+            line-height: 1.7;
+            margin: 16px 0;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .code-block .label {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            font-size: 0.7em;
+            color: #666;
+            font-family: -apple-system, sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .code-block .key { color: #82aaff; }
+        .code-block .string { color: #c3e88d; }
+        .code-block .number { color: #f78c6c; }
+        .code-block .comment { color: #546e7a; font-style: italic; }
+        .code-block .bracket { color: #89ddff; }
+        .code-block .highlight { color: #ffcb6b; }
+
+        .layer-diagram {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border-radius: 16px;
+            padding: 32px;
+            margin: 24px 0;
+            color: #eee;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.8em;
+            line-height: 1.9;
+            overflow-x: auto;
+        }
+
+        .layer-diagram .layer-name { color: #4ecdc4; font-weight: bold; }
+        .layer-diagram .desc { color: #999; }
+        .layer-diagram .arrow { color: #f39c12; }
+        .layer-diagram .dim { color: #555; }
+
+        .principle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 18px 0; }
+        .principle-item { background: white; border-radius: 12px; padding: 18px; border: 1px solid #eee; }
+        .principle-item h4 { color: #0f3460; margin-bottom: 6px; font-size: 0.92em; }
+        .principle-item p { font-size: 0.86em; color: #555; margin: 0; }
+
+        .flow-steps {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            margin: 24px 0;
+        }
+
+        .flow-step {
+            background: white;
+            border-radius: 12px;
+            padding: 18px 14px;
+            text-align: center;
+            border: 1px solid #eee;
+            position: relative;
+        }
+
+        .flow-step::after {
+            content: '→';
+            position: absolute;
+            right: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #0f3460;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .flow-step:last-child::after { content: ''; }
+
+        .flow-step .step-num {
+            width: 24px;
+            height: 24px;
+            background: #0f3460;
+            color: white;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72em;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .flow-step h4 { font-size: 0.82em; margin-bottom: 4px; }
+        .flow-step p { font-size: 0.75em; color: #666; margin: 0; }
+
+        .checklist { list-style: none; padding: 0; }
+        .checklist li { padding: 9px 0; padding-left: 26px; position: relative; border-bottom: 1px solid #f0f0f0; }
+        .checklist li::before { content: '→'; position: absolute; left: 0; color: #0f3460; font-weight: bold; }
+        .checklist li:last-child { border-bottom: none; }
+
+        .quote {
+            background: #f5f7fa;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin: 16px 0;
+            font-size: 1em;
+            color: #333;
+            font-style: italic;
+            border-left: 3px solid #3498db;
+        }
+
+        .verdict {
+            background: linear-gradient(135deg, #f8f9fc, #eef2ff);
+            border-radius: 14px;
+            padding: 36px;
+            text-align: center;
+            margin: 36px 0;
+        }
+
+        .verdict h3 { font-size: 1.3em; margin-bottom: 14px; margin-top: 0; color: #0f3460; }
+        .verdict p { max-width: 700px; margin: 0 auto; font-size: 1em; }
+
+        .tag { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 0.8em; font-weight: 600; margin-right: 5px; }
+        .tag-structure { background: #e3f2fd; color: #1565c0; }
+        .tag-data { background: #e8f5e9; color: #2e7d32; }
+        .tag-catalog { background: #fff3e0; color: #e65100; }
+        .tag-action { background: #fce4ec; color: #c62828; }
+        .tag-theme { background: #f3e5f5; color: #6a1b9a; }
+
+        .vs-box { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 18px 0; }
+        .vs-item { padding: 18px; border-radius: 12px; background: white; border: 1px solid #eee; }
+        .vs-item.bad { border-color: #e74c3c; background: #fef9f9; }
+        .vs-item.good { border-color: #27ae60; background: #f8fff8; }
+        .vs-label { font-size: 0.72em; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+        .vs-item.bad .vs-label { color: #e74c3c; }
+        .vs-item.good .vs-label { color: #27ae60; }
+
+        footer { text-align: center; padding: 36px; color: #999; font-size: 0.82em; border-top: 1px solid #eee; margin-top: 50px; }
+
+        @media (max-width: 768px) {
+            .container { padding: 30px 20px; }
+            header { padding: 36px 20px; }
+            header h1 { font-size: 1.6em; }
+            .flow-steps { grid-template-columns: 1fr; }
+            .flow-step::after { content: '↓'; right: auto; left: 50%; top: auto; bottom: -10px; transform: translateX(-50%); }
+            .principle-grid { grid-template-columns: 1fr; }
+            .vs-box { grid-template-columns: 1fr; }
+            .card { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>A2UI 组件分层架构</h1>
+            <p>基于 Google A2UI 协议的组件解构思路——五层分离，用于 LLM 训练与生成式 UI</p>
+        </header>
+
+        <div class="toc">
+            <h3>目录</h3>
+            <ol>
+                <li>A2UI 协议核心思路</li>
+                <li>五层分离总览</li>
+                <li>Layer 1: 结构层 (Structure)</li>
+                <li>Layer 2: 数据层 (Data Model)</li>
+                <li>Layer 3: 组件目录层 (Catalog)</li>
+                <li>Layer 4: 交互层 (Action)</li>
+                <li>Layer 5: 主题层 (Theme)</li>
+                <li>完整示例：一个 Deal 卡片的五层拆解</li>
+                <li>训练数据格式建议</li>
+                <li>设计原则与约束</li>
+            </ol>
+        </div>
+
+        <!-- S1: Core Idea -->
+        <div class="section">
+            <div class="section-header"><div class="section-number">1</div><h2>A2UI 协议核心思路</h2></div>
+
+            <div class="card card-accent">
+                <p style="margin:0;"><strong>A2UI (Agent-to-UI)</strong> 是 Google 提出的声明式 UI 协议，让 AI Agent 通过 JSON 描述 UI 意图，客户端用原生组件渲染。核心理念：<strong>LLM 生成结构化描述，不生成代码。</strong></p>
+            </div>
+
+            <h3>为什么要分层？</h3>
+            <div class="principle-grid">
+                <div class="principle-item"><h4>安全性</h4><p>声明式 JSON 不可执行，Agent 只能选取预定义组件，防注入攻击。</p></div>
+                <div class="principle-item"><h4>LLM 友好</h4><p>扁平结构比深层嵌套更适合 LLM 生成——减少括号匹配错误。</p></div>
+                <div class="principle-item"><h4>渐进式渲染</h4><p>JSONL 流式输出，生成一个组件就渲染一个，不等完整树。</p></div>
+                <div class="principle-item"><h4>跨平台</h4><p>同一份描述 → React / Flutter / 小程序用各自原生控件渲染。</p></div>
+            </div>
+
+            <div class="vs-box">
+                <div class="vs-item bad"><div class="vs-label">❌ 传统方式</div><p><strong>LLM 生成 HTML/CSS/JS</strong></p><p style="font-size:0.85em;color:#888;">不安全、不可控、跨平台差</p></div>
+                <div class="vs-item good"><div class="vs-label">✓ A2UI 方式</div><p><strong>LLM 生成组件描述 JSON</strong></p><p style="font-size:0.85em;color:#555;">安全、受控、平台无关</p></div>
+            </div>
+        </div>
+
+        <!-- S2: Five Layers Overview -->
+        <div class="section">
+            <div class="section-header"><div class="section-number">2</div><h2>五层分离总览</h2></div>
+
+            <div class="layer-diagram">
+<span class="layer-name">┌─────────────────────────────────────────────────────────────┐</span><br>
+<span class="layer-name">│  Layer 5: Theme</span> <span class="desc">— 视觉样式（颜色/间距/字体/圆角）</span><br>
+<span class="layer-name">├─────────────────────────────────────────────────────────────┤</span><br>
+<span class="layer-name">│  Layer 4: Action</span> <span class="desc">— 交互行为（点击/提交/滚动 → 回调 Agent）</span><br>
+<span class="layer-name">├─────────────────────────────────────────────────────────────┤</span><br>
+<span class="layer-name">│  Layer 3: Catalog</span> <span class="desc">— 可用组件约束（Agent 只能用这些类型）</span><br>
+<span class="layer-name">├─────────────────────────────────────────────────────────────┤</span><br>
+<span class="layer-name">│  Layer 2: Data Model</span> <span class="desc">— 动态数据绑定（值变了 UI 自动更新）</span><br>
+<span class="layer-name">├─────────────────────────────────────────────────────────────┤</span><br>
+<span class="layer-name">│  Layer 1: Structure</span> <span class="desc">— 组件树骨架（扁平邻接表 + ID 引用）</span><br>
+<span class="layer-name">└─────────────────────────────────────────────────────────────┘</span><br>
+<br>
+<span class="arrow">↕ 各层独立变更，互不影响</span><br>
+<span class="desc">结构不变时换主题 → 只改 Theme</span><br>
+<span class="desc">数据刷新时 → 只发 Data Model update</span><br>
+<span class="desc">新增组件类型 → 只扩展 Catalog</span>
+            </div>
+
+            <table>
+                <tr><th>层级</th><th>职责</th><th>变更频率</th><th>训练目标</th></tr>
+                <tr><td><span class="tag tag-structure">Structure</span></td><td>定义"有哪些组件、怎么嵌套"</td><td>页面级</td><td>LLM 学会布局选择</td></tr>
+                <tr><td><span class="tag tag-data">Data Model</span></td><td>定义"数据从哪来、绑定到哪"</td><td>实时</td><td>LLM 学会数据视图分离</td></tr>
+                <tr><td><span class="tag tag-catalog">Catalog</span></td><td>定义"能用哪些组件类型"</td><td>版本级</td><td>LLM 只在边界内生成</td></tr>
+                <tr><td><span class="tag tag-action">Action</span></td><td>定义"用户操作触发什么"</td><td>交互级</td><td>LLM 学会声明式行为</td></tr>
+                <tr><td><span class="tag tag-theme">Theme</span></td><td>定义"长什么样"</td><td>品牌级</td><td>LLM 学会样式与结构解耦</td></tr>
+            </table>
+        </div>
+
+        <!-- S3: Structure Layer -->
+        <div class="section">
+            <div class="section-header"><div class="section-number">3</div><h2>Layer 1: 结构层 (Structure)</h2></div>
+
+            <div class="card card-blue">
+                <p style="margin:0;">定义组件树的<strong>骨架和父子关系</strong>。采用扁平邻接表模型——所有组件平铺在数组里，通过 ID 引用建立层级。</p>
+            </div>
+
+            <h3>核心字段</h3>
+            <table>
+                <tr><th>字段</th><th>类型</th><th>说明</th></tr>
+                <tr><td><code>id</code></td><td>string</td><td>组件唯一标识，全局不重复</td></tr>
+                <tr><td><code>component</code></td><td>string</td><td>组件类型，必须在 Catalog 中存在</td></tr>
+                <tr><td><code>children</code></td><td>string[]</td><td>子组件 ID 列表（容器类组件）</td></tr>
+                <tr><td><code>child</code></td><td>string</td><td>单子组件 ID（单槽组件如 Card）</td></tr>
+            </table>
+
+            <h3>示例</h3>
+            <div class="code-block">
+                <span class="label">Structure JSON</span>
+<span class="bracket">{</span><br>
+&nbsp;&nbsp;<span class="key">"updateComponents"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"surfaceId"</span>: <span class="string">"deals-page"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"components"</span>: <span class="bracket">[</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"root"</span>, <span class="key">"component"</span>: <span class="string">"Column"</span>, <span class="key">"children"</span>: <span class="bracket">[</span><span class="string">"header"</span>, <span class="string">"card-1"</span>, <span class="string">"card-2"</span><span class="bracket">]</span> <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"header"</span>, <span class="key">"component"</span>: <span class="string">"Text"</span>, <span class="key">"text"</span>: <span class="string">"今日闪购"</span> <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"card-1"</span>, <span class="key">"component"</span>: <span class="string">"Card"</span>, <span class="key">"children"</span>: <span class="bracket">[</span><span class="string">"img-1"</span>, <span class="string">"info-1"</span><span class="bracket">]</span> <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"img-1"</span>, <span class="key">"component"</span>: <span class="string">"Image"</span>, <span class="key">"url"</span>: <span class="string">"..."</span> <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"info-1"</span>, <span class="key">"component"</span>: <span class="string">"Column"</span>, <span class="key">"children"</span>: <span class="bracket">[</span><span class="string">"title-1"</span>, <span class="string">"price-1"</span><span class="bracket">]</span> <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"title-1"</span>, <span class="key">"component"</span>: <span class="string">"Text"</span>, <span class="key">"text"</span>: <span class="string">"东京新宿希尔顿"</span> <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"price-1"</span>, <span class="key">"component"</span>: <span class="string">"PriceTag"</span> <span class="bracket">}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">]</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span><br>
+<span class="bracket">}</span>
+            </div>
+
+            <div class="quote">关键设计：<strong>扁平列表</strong>而非嵌套树。LLM 生成时无需跟踪括号深度，每个组件独立一行，流式输出时可逐个渲染。</div>
+        </div>
+
+        <!-- S4: Data Model Layer -->
+        <div class="section">
+            <div class="section-header"><div class="section-number">4</div><h2>Layer 2: 数据层 (Data Model)</h2></div>
+
+            <div class="card card-success">
+                <p style="margin:0;">将动态数据与 UI 结构<strong>完全解耦</strong>。组件通过 JSON Pointer 绑定数据源，数据变化时只需发送 <code>updateDataModel</code>，无需重新生成组件树。</p>
+            </div>
+
+            <h3>数据模型定义</h3>
+            <div class="code-block">
+                <span class="label">Data Model</span>
+<span class="bracket">{</span><br>
+&nbsp;&nbsp;<span class="key">"updateDataModel"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"surfaceId"</span>: <span class="string">"deals-page"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"value"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"hotels"</span>: <span class="bracket">[</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"id"</span>: <span class="string">"htl_001"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"name"</span>: <span class="string">"东京新宿希尔顿"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"currentPrice"</span>: <span class="number">599</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"originalPrice"</span>: <span class="number">890</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"discount"</span>: <span class="string">"-35%"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"rating"</span>: <span class="number">4.7</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"remainingRooms"</span>: <span class="number">3</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">]</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span><br>
+<span class="bracket">}</span>
+            </div>
+
+            <h3>组件绑定数据</h3>
+            <div class="code-block">
+                <span class="label">Binding</span>
+<span class="comment">// 组件通过 binding 字段引用数据模型中的路径</span><br>
+<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"price-1"</span>, <span class="key">"component"</span>: <span class="string">"PriceTag"</span>,<br>
+&nbsp;&nbsp;<span class="key">"bindings"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"current"</span>: <span class="string">"/hotels/0/currentPrice"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"original"</span>: <span class="string">"/hotels/0/originalPrice"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"badge"</span>: <span class="string">"/hotels/0/discount"</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span><br>
+<span class="bracket">}</span>
+            </div>
+
+            <h3>增量更新</h3>
+            <div class="code-block">
+                <span class="label">Partial Update</span>
+<span class="comment">// 价格变了，只更新数据，UI 自动响应</span><br>
+<span class="bracket">{</span><br>
+&nbsp;&nbsp;<span class="key">"updateDataModel"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"surfaceId"</span>: <span class="string">"deals-page"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"path"</span>: <span class="string">"/hotels/0/currentPrice"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"value"</span>: <span class="number">549</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span><br>
+<span class="bracket">}</span>
+            </div>
+
+            <div class="quote">好处：Agent 回答"价格查询"时只需更新 Data Model，不用重新描述整个 UI 结构。训练时 LLM 学会区分"改结构"和"改数据"。</div>
+        </div>
+
+        <!-- S5: Catalog Layer -->
+        <div class="section">
+            <div class="section-header"><div class="section-number">5</div><h2>Layer 3: 组件目录层 (Catalog)</h2></div>
+
+            <div class="card card-warning">
+                <p style="margin:0;">Catalog 定义了 LLM <strong>能使用的所有组件类型及其合法属性</strong>。这是安全边界——Agent 无法创造 Catalog 之外的组件。相当于给 LLM 一个"菜单"。</p>
+            </div>
+
+            <h3>Catalog Schema 示例</h3>
+            <div class="code-block">
+                <span class="label">Component Catalog</span>
+<span class="bracket">{</span><br>
+&nbsp;&nbsp;<span class="key">"catalogId"</span>: <span class="string">"deals-v1"</span>,<br>
+&nbsp;&nbsp;<span class="key">"components"</span>: <span class="bracket">{</span><br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">"Column"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"description"</span>: <span class="string">"纵向容器"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"props"</span>: <span class="bracket">{</span> <span class="key">"children"</span>: <span class="string">"string[]"</span>, <span class="key">"gap"</span>: <span class="string">"number"</span>, <span class="key">"alignment"</span>: <span class="string">"start|center|end"</span> <span class="bracket">}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">"Card"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"description"</span>: <span class="string">"卡片容器，带圆角和阴影"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"props"</span>: <span class="bracket">{</span> <span class="key">"children"</span>: <span class="string">"string[]"</span>, <span class="key">"elevation"</span>: <span class="string">"number"</span>, <span class="key">"padding"</span>: <span class="string">"number"</span> <span class="bracket">}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">"Text"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"description"</span>: <span class="string">"文本组件"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"props"</span>: <span class="bracket">{</span> <span class="key">"text"</span>: <span class="string">"string"</span>, <span class="key">"variant"</span>: <span class="string">"h1|h2|body|caption"</span>, <span class="key">"binding"</span>: <span class="string">"jsonPointer"</span> <span class="bracket">}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">"PriceTag"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"description"</span>: <span class="string">"价格展示，含现价/原价/折扣标签"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"props"</span>: <span class="bracket">{</span> <span class="key">"bindings"</span>: <span class="string">"object"</span>, <span class="key">"currency"</span>: <span class="string">"string"</span>, <span class="key">"showOriginal"</span>: <span class="string">"boolean"</span> <span class="bracket">}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">"Button"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"description"</span>: <span class="string">"可点击按钮"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"props"</span>: <span class="bracket">{</span> <span class="key">"label"</span>: <span class="string">"string"</span>, <span class="key">"variant"</span>: <span class="string">"primary|secondary|text"</span>, <span class="key">"action"</span>: <span class="string">"Action"</span> <span class="bracket">}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">"Countdown"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"description"</span>: <span class="string">"倒计时组件"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"props"</span>: <span class="bracket">{</span> <span class="key">"endTime"</span>: <span class="string">"ISO8601"</span>, <span class="key">"label"</span>: <span class="string">"string"</span> <span class="bracket">}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">"Image"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"description"</span>: <span class="string">"图片组件"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"props"</span>: <span class="bracket">{</span> <span class="key">"url"</span>: <span class="string">"string"</span>, <span class="key">"alt"</span>: <span class="string">"string"</span>, <span class="key">"aspectRatio"</span>: <span class="string">"string"</span> <span class="bracket">}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">"Badge"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"description"</span>: <span class="string">"标签/徽章"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"props"</span>: <span class="bracket">{</span> <span class="key">"text"</span>: <span class="string">"string"</span>, <span class="key">"color"</span>: <span class="string">"success|warning|error|info"</span> <span class="bracket">}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span><br>
+<br>
+&nbsp;&nbsp;<span class="bracket">}</span><br>
+<span class="bracket">}</span>
+            </div>
+
+            <div class="card card-accent">
+                <h4>训练意义</h4>
+                <p style="margin:0;">Catalog 放在 system prompt 中，LLM 被约束为"只能用菜单上的菜"。训练时 pair 的格式是：<code>(需求描述, Catalog) → 合法组件组合</code>。如果 LLM 生成了 Catalog 中不存在的 <code>component</code> 值，validation 直接拒绝。</p>
+            </div>
+        </div>
+
+        <!-- S6: Action Layer -->
+        <div class="section">
+            <div class="section-header"><div class="section-number">6</div><h2>Layer 4: 交互层 (Action)</h2></div>
+
+            <div class="card card-purple">
+                <p style="margin:0;">定义用户操作如何<strong>声明式地回调 Agent</strong>——不是"执行代码"，而是"发送事件描述"。Agent 收到事件后决定下一步响应。</p>
+            </div>
+
+            <h3>Action 类型</h3>
+            <table>
+                <tr><th>类型</th><th>触发时机</th><th>用途</th></tr>
+                <tr><td><code>callback</code></td><td>用户点击/提交</td><td>发送事件给 Agent，等待响应</td></tr>
+                <tr><td><code>navigate</code></td><td>用户点击</td><td>跳转到指定 URL 或页面</td></tr>
+                <tr><td><code>updateLocal</code></td><td>用户交互</td><td>仅更新本地 Data Model，不回调</td></tr>
+                <tr><td><code>dismiss</code></td><td>用户关闭</td><td>移除当前 surface</td></tr>
+            </table>
+
+            <h3>示例：预订按钮回调</h3>
+            <div class="code-block">
+                <span class="label">Action Definition</span>
+<span class="bracket">{</span><br>
+&nbsp;&nbsp;<span class="key">"id"</span>: <span class="string">"book-btn"</span>,<br>
+&nbsp;&nbsp;<span class="key">"component"</span>: <span class="string">"Button"</span>,<br>
+&nbsp;&nbsp;<span class="key">"label"</span>: <span class="string">"立即预订 ¥599"</span>,<br>
+&nbsp;&nbsp;<span class="key">"variant"</span>: <span class="string">"primary"</span>,<br>
+&nbsp;&nbsp;<span class="key">"action"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"type"</span>: <span class="string">"callback"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"event"</span>: <span class="string">"book_hotel"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"payload"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"hotelId"</span>: <span class="string">"{{/hotels/0/id}}"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"price"</span>: <span class="string">"{{/hotels/0/currentPrice}}"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span><br>
+<span class="bracket">}</span>
+            </div>
+
+            <h3>示例：收藏 + 本地状态切换</h3>
+            <div class="code-block">
+                <span class="label">Toggle Action</span>
+<span class="bracket">{</span><br>
+&nbsp;&nbsp;<span class="key">"id"</span>: <span class="string">"fav-btn"</span>,<br>
+&nbsp;&nbsp;<span class="key">"component"</span>: <span class="string">"Button"</span>,<br>
+&nbsp;&nbsp;<span class="key">"label"</span>: <span class="string">"♡ 收藏"</span>,<br>
+&nbsp;&nbsp;<span class="key">"variant"</span>: <span class="string">"text"</span>,<br>
+&nbsp;&nbsp;<span class="key">"action"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"type"</span>: <span class="string">"callback"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"event"</span>: <span class="string">"toggle_favorite"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"payload"</span>: <span class="bracket">{</span> <span class="key">"hotelId"</span>: <span class="string">"{{/hotels/0/id}}"</span> <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"optimistic"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"path"</span>: <span class="string">"/hotels/0/isFavorited"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"value"</span>: <span class="highlight">true</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span><br>
+<span class="bracket">}</span>
+            </div>
+        </div>
+
+        <!-- S7: Theme Layer -->
+        <div class="section">
+            <div class="section-header"><div class="section-number">7</div><h2>Layer 5: 主题层 (Theme)</h2></div>
+
+            <div class="card card-accent">
+                <p style="margin:0;">Theme 层定义<strong>视觉表现</strong>——完全独立于结构。同一个组件树，切换 Theme 就能变身"黑五促销风"或"春日清新风"。</p>
+            </div>
+
+            <h3>Theme Token 定义</h3>
+            <div class="code-block">
+                <span class="label">Theme Tokens</span>
+<span class="bracket">{</span><br>
+&nbsp;&nbsp;<span class="key">"themeId"</span>: <span class="string">"deals-summer-2026"</span>,<br>
+&nbsp;&nbsp;<span class="key">"colors"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"primary"</span>: <span class="string">"#0f3460"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"secondary"</span>: <span class="string">"#3498db"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"accent"</span>: <span class="string">"#e94560"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"background"</span>: <span class="string">"#f8f9fc"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"surface"</span>: <span class="string">"#ffffff"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"textPrimary"</span>: <span class="string">"#1a1a2e"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"textSecondary"</span>: <span class="string">"#666666"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"success"</span>: <span class="string">"#2ecc71"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"error"</span>: <span class="string">"#e74c3c"</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+&nbsp;&nbsp;<span class="key">"spacing"</span>: <span class="bracket">{</span> <span class="key">"xs"</span>: <span class="number">4</span>, <span class="key">"sm"</span>: <span class="number">8</span>, <span class="key">"md"</span>: <span class="number">16</span>, <span class="key">"lg"</span>: <span class="number">24</span>, <span class="key">"xl"</span>: <span class="number">32</span> <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;<span class="key">"borderRadius"</span>: <span class="bracket">{</span> <span class="key">"sm"</span>: <span class="number">8</span>, <span class="key">"md"</span>: <span class="number">12</span>, <span class="key">"lg"</span>: <span class="number">20</span> <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;<span class="key">"typography"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"h1"</span>: <span class="bracket">{</span> <span class="key">"size"</span>: <span class="number">24</span>, <span class="key">"weight"</span>: <span class="number">700</span>, <span class="key">"lineHeight"</span>: <span class="number">1.3</span> <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"h2"</span>: <span class="bracket">{</span> <span class="key">"size"</span>: <span class="number">18</span>, <span class="key">"weight"</span>: <span class="number">600</span>, <span class="key">"lineHeight"</span>: <span class="number">1.4</span> <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"body"</span>: <span class="bracket">{</span> <span class="key">"size"</span>: <span class="number">14</span>, <span class="key">"weight"</span>: <span class="number">400</span>, <span class="key">"lineHeight"</span>: <span class="number">1.6</span> <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"caption"</span>: <span class="bracket">{</span> <span class="key">"size"</span>: <span class="number">12</span>, <span class="key">"weight"</span>: <span class="number">400</span>, <span class="key">"lineHeight"</span>: <span class="number">1.4</span> <span class="bracket">}</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+&nbsp;&nbsp;<span class="key">"elevation"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"low"</span>: <span class="string">"0 2px 8px rgba(0,0,0,0.06)"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"medium"</span>: <span class="string">"0 4px 16px rgba(0,0,0,0.1)"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"high"</span>: <span class="string">"0 8px 32px rgba(0,0,0,0.15)"</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span><br>
+<span class="bracket">}</span>
+            </div>
+        </div>
+
+        <!-- S8: Full Example -->
+        <div class="section">
+            <div class="section-header"><div class="section-number">8</div><h2>完整示例：一个 Deal 卡片的五层拆解</h2></div>
+
+            <div class="card card-accent">
+                <p style="margin:0;">以"东京希尔顿 -35% 闪购卡片"为例，展示同一个 UI 如何被拆成五层独立描述。</p>
+            </div>
+
+            <h3><span class="tag tag-structure">Structure</span> 骨架</h3>
+            <div class="code-block">
+<span class="bracket">[</span><br>
+&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"deal-card"</span>, <span class="key">"component"</span>: <span class="string">"Card"</span>, <span class="key">"children"</span>: [<span class="string">"deal-img"</span>, <span class="string">"deal-body"</span>] <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"deal-img"</span>, <span class="key">"component"</span>: <span class="string">"Image"</span>, <span class="key">"aspectRatio"</span>: <span class="string">"16:9"</span> <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"deal-body"</span>, <span class="key">"component"</span>: <span class="string">"Column"</span>, <span class="key">"children"</span>: [<span class="string">"deal-badge"</span>, <span class="string">"deal-title"</span>, <span class="string">"deal-subtitle"</span>, <span class="string">"deal-price"</span>, <span class="string">"deal-cta"</span>] <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"deal-badge"</span>, <span class="key">"component"</span>: <span class="string">"Badge"</span>, <span class="key">"color"</span>: <span class="string">"error"</span> <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"deal-title"</span>, <span class="key">"component"</span>: <span class="string">"Text"</span>, <span class="key">"variant"</span>: <span class="string">"h2"</span> <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"deal-subtitle"</span>, <span class="key">"component"</span>: <span class="string">"Text"</span>, <span class="key">"variant"</span>: <span class="string">"caption"</span> <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"deal-price"</span>, <span class="key">"component"</span>: <span class="string">"PriceTag"</span>, <span class="key">"showOriginal"</span>: <span class="highlight">true</span> <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"deal-cta"</span>, <span class="key">"component"</span>: <span class="string">"Button"</span>, <span class="key">"variant"</span>: <span class="string">"primary"</span> <span class="bracket">}</span><br>
+<span class="bracket">]</span>
+            </div>
+
+            <h3><span class="tag tag-data">Data Model</span> 数据</h3>
+            <div class="code-block">
+<span class="bracket">{</span><br>
+&nbsp;&nbsp;<span class="key">"deal"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"image"</span>: <span class="string">"https://img.trip.com/hilton-shinjuku.jpg"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"badge"</span>: <span class="string">"近30天最低"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"title"</span>: <span class="string">"东京新宿希尔顿"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"subtitle"</span>: <span class="string">"★4.7 · 含早 · 免费取消"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"currentPrice"</span>: <span class="number">599</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"originalPrice"</span>: <span class="number">890</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"discount"</span>: <span class="string">"-35%"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"ctaLabel"</span>: <span class="string">"立即预订"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"hotelId"</span>: <span class="string">"htl_001"</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span><br>
+<span class="bracket">}</span>
+            </div>
+
+            <h3><span class="tag tag-catalog">Catalog</span> 约束（该卡片用到的类型）</h3>
+            <div class="code-block">
+<span class="comment">// LLM 在生成上述结构时，只能从以下类型中选取：</span><br>
+<span class="string">Card, Image, Column, Badge, Text, PriceTag, Button</span><br>
+<br>
+<span class="comment">// 如果 LLM 输出了 "component": "VideoPlayer"</span><br>
+<span class="comment">// → Validation 拒绝，因为 Catalog 中无此类型</span>
+            </div>
+
+            <h3><span class="tag tag-action">Action</span> 交互</h3>
+            <div class="code-block">
+<span class="comment">// deal-cta 按钮的 action</span><br>
+<span class="bracket">{</span><br>
+&nbsp;&nbsp;<span class="key">"type"</span>: <span class="string">"navigate"</span>,<br>
+&nbsp;&nbsp;<span class="key">"url"</span>: <span class="string">"trip://hotel/detail/{{/deal/hotelId}}"</span><br>
+<span class="bracket">}</span><br>
+<br>
+<span class="comment">// 或回调 Agent 获取更多信息</span><br>
+<span class="bracket">{</span><br>
+&nbsp;&nbsp;<span class="key">"type"</span>: <span class="string">"callback"</span>,<br>
+&nbsp;&nbsp;<span class="key">"event"</span>: <span class="string">"view_deal_detail"</span>,<br>
+&nbsp;&nbsp;<span class="key">"payload"</span>: <span class="bracket">{</span> <span class="key">"hotelId"</span>: <span class="string">"{{/deal/hotelId}}"</span> <span class="bracket">}</span><br>
+<span class="bracket">}</span>
+            </div>
+
+            <h3><span class="tag tag-theme">Theme</span> 样式</h3>
+            <div class="code-block">
+<span class="comment">// 该卡片继承全局 Theme，无需单独定义</span><br>
+<span class="comment">// Card → borderRadius: theme.borderRadius.md (12px)</span><br>
+<span class="comment">// Badge color="error" → theme.colors.error (#e74c3c)</span><br>
+<span class="comment">// Text variant="h2" → theme.typography.h2 (18px/600)</span><br>
+<span class="comment">// Button variant="primary" → bg: theme.colors.primary</span>
+            </div>
+        </div>
+
+        <!-- S9: Training Format -->
+        <div class="section">
+            <div class="section-header"><div class="section-number">9</div><h2>训练数据格式建议</h2></div>
+
+            <h3>训练对 (Training Pair) 结构</h3>
+            <div class="code-block">
+                <span class="label">Training Sample</span>
+<span class="bracket">{</span><br>
+&nbsp;&nbsp;<span class="key">"input"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"userIntent"</span>: <span class="string">"展示一个酒店闪购卡片，要有图片、折扣徽章、价格对比和预订按钮"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"catalog"</span>: <span class="string">"[...可用组件列表...]"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"dataContext"</span>: <span class="string">"[...当前可用数据字段...]"</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+&nbsp;&nbsp;<span class="key">"output"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"structure"</span>: <span class="string">"[...组件树 JSON...]"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"bindings"</span>: <span class="string">"[...数据绑定...]"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"actions"</span>: <span class="string">"[...交互定义...]"</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span><br>
+<span class="bracket">}</span>
+            </div>
+
+            <h3>训练阶段建议</h3>
+            <table>
+                <tr><th>阶段</th><th>训练内容</th><th>评估标准</th></tr>
+                <tr><td><strong>Phase 1: 结构生成</strong></td><td>需求 → 合法组件树</td><td>所有 component 值在 Catalog 中；ID 唯一；children 引用有效</td></tr>
+                <tr><td><strong>Phase 2: 数据绑定</strong></td><td>组件树 + 数据模型 → 正确 binding</td><td>JSON Pointer 路径存在于 Data Model 中</td></tr>
+                <tr><td><strong>Phase 3: 交互声明</strong></td><td>组件树 → 合理 action 定义</td><td>action type 合法；payload 字段可从 context 推导</td></tr>
+                <tr><td><strong>Phase 4: 端到端</strong></td><td>自然语言需求 → 完整五层输出</td><td>渲染后 UI 可用；交互链路完整</td></tr>
+            </table>
+
+            <h3>数据增强策略</h3>
+            <div class="principle-grid">
+                <div class="principle-item"><h4>结构变体</h4><p>同一需求，生成多种布局（竖排/横排/网格），训练 LLM 理解布局选择。</p></div>
+                <div class="principle-item"><h4>数据变体</h4><p>同一结构，绑定不同数据源（酒店/机票/门票），训练数据绑定泛化。</p></div>
+                <div class="principle-item"><h4>Catalog 变体</h4><p>不同 Catalog 约束下生成 UI，训练 LLM 在边界内创造性组合。</p></div>
+                <div class="principle-item"><h4>负样本</h4><p>包含"用了 Catalog 外组件"等违规输出，训练 LLM 识别并避免。</p></div>
+            </div>
+        </div>
+
+        <!-- S10: Design Principles -->
+        <div class="section">
+            <div class="section-header"><div class="section-number">10</div><h2>设计原则与约束</h2></div>
+
+            <div class="card card-blue">
+                <h4>面向 LLM 的结构设计原则</h4>
+                <ul class="checklist">
+                    <li><strong>扁平优于嵌套</strong> — 邻接表模型避免深层括号匹配，减少生成错误</li>
+                    <li><strong>声明式优于命令式</strong> — 描述"是什么"而非"怎么做"，安全且可验证</li>
+                    <li><strong>流式友好</strong> — 每个组件独立一行 JSONL，可逐条输出逐条渲染</li>
+                    <li><strong>约束生成</strong> — Catalog 枚举所有合法类型，validation 层自动拦截幻觉</li>
+                    <li><strong>数据解耦</strong> — 结构稳定时只更新数据，避免重新生成整棵树</li>
+                </ul>
+            </div>
+
+            <div class="card card-warning">
+                <h4>常见反模式（训练中要避免）</h4>
+                <ul class="checklist">
+                    <li><strong>内联样式</strong> — 组件中写死颜色/字号 → 应该通过 Theme token 间接引用</li>
+                    <li><strong>硬编码数据</strong> — 在结构层写死文案 → 应该通过 binding 引用 Data Model</li>
+                    <li><strong>造新组件</strong> — 输出 Catalog 不存在的 component → 应该用已有类型组合</li>
+                    <li><strong>深层嵌套</strong> — 7-8 层的树 → 应该拆分为多个扁平 surface</li>
+                    <li><strong>混合关注点</strong> — 在 action 中写业务逻辑 → 应该只声明事件名+负载</li>
+                </ul>
+            </div>
+
+            <div class="verdict">
+                <h3>总结：一个组件 = 五张卡片</h3>
+                <p>Structure（骨架）+ Data（血肉）+ Catalog（边界）+ Action（神经）+ Theme（皮肤）<br><br>训练时分层拆解，生成时按需组合。每一层都可以独立变更、独立验证、独立缓存。</p>
+            </div>
+        </div>
+
+        <footer>A2UI 组件分层架构 · 训练参考指南 · 2026.06</footer>
+    </div>
+</body>
+</html>

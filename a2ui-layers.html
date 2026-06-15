@@ -286,6 +286,10 @@
                 <li>LLM 生成策略：分步生成 vs 一次生成</li>
                 <li>约束规则与验证清单</li>
                 <li>页面级分层对训练的意义</li>
+                <li>全球化视觉偏好：区域风格适配</li>
+                <li>主题解析流程与条件选择</li>
+                <li>用户偏好信号与 AI 推断</li>
+                <li>全球化视觉适配的训练策略</li>
             </ol>
         </div>
 
@@ -1088,6 +1092,303 @@
                 LLM 生成量 = N × M（通常 20-50）<br>
                 实际渲染量 = Σ(M<sub>i</sub> × K<sub>i</sub>)（可达数百）<br><br>
                 训练目标：让 LLM 学会"用最少的模板组件覆盖最多的 UI 实例"。</p>
+            </div>
+        </div>
+
+        <!-- S17: Global User Preferences -->
+        <div class="section">
+            <div class="section-header"><div class="section-number">17</div><h2>全球化视觉偏好：区域风格适配</h2></div>
+
+            <div class="card card-accent">
+                <p style="margin:0;">Trip.com 服务全球用户，不同市场对色彩、密度、排版方向、促销表达有显著偏好差异。A2UI 通过 <strong>Theme Token + Region Profile + User Preference</strong> 三层覆盖，实现同一结构输出不同视觉风格。</p>
+            </div>
+
+            <h3>区域视觉偏好差异图谱</h3>
+            <table>
+                <tr><th>维度</th><th>东亚 (CN/JP/KR)</th><th>东南亚 (TH/VN/ID)</th><th>欧美 (US/UK/DE)</th><th>中东 (AE/SA)</th></tr>
+                <tr><td><strong>信息密度</strong></td><td>高密度，一屏多信息</td><td>中密度，图文混排</td><td>低密度，大留白</td><td>中密度</td></tr>
+                <tr><td><strong>色彩倾向</strong></td><td>红/橙/金（促销感）</td><td>明亮多彩、渐变</td><td>冷静、单色系</td><td>金/绿/深色奢华</td></tr>
+                <tr><td><strong>促销表达</strong></td><td>大字折扣 + 倒计时</td><td>徽章 + 闪烁</td><td>克制、小标签</td><td>分期/里程</td></tr>
+                <tr><td><strong>排版方向</strong></td><td>LTR</td><td>LTR</td><td>LTR</td><td>RTL</td></tr>
+                <tr><td><strong>字体大小</strong></td><td>偏小，紧凑</td><td>中等</td><td>偏大，重可读性</td><td>大，阿拉伯字体需额外行高</td></tr>
+                <tr><td><strong>图片偏好</strong></td><td>精修实拍</td><td>人物+场景</td><td>风景+建筑</td><td>奢华感+家庭</td></tr>
+                <tr><td><strong>CTA 风格</strong></td><td>强色+大按钮</td><td>渐变+圆角</td><td>描边/文字链接</td><td>全宽按钮</td></tr>
+            </table>
+
+            <h3>三层覆盖机制</h3>
+            <div class="layer-diagram">
+<span class="layer-name">┌─── Layer 1: Base Theme ──────────────────────────────────────┐</span><br>
+<span class="desc">│  品牌基础 Token（Trip.com 全局：字体、基础色板、间距基准）      │</span><br>
+<span class="layer-name">└──────────────────────────────────────────────────────────────┘</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="arrow">▼ 覆盖</span><br>
+<span class="layer-name">┌─── Layer 2: Region Profile ──────────────────────────────────┐</span><br>
+<span class="desc">│  区域预设（密度、配色方案、排版方向、促销表达模式）             │</span><br>
+<span class="desc">│  → 由 locale 或 region code 自动选取                          │</span><br>
+<span class="layer-name">└──────────────────────────────────────────────────────────────┘</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="arrow">▼ 覆盖</span><br>
+<span class="layer-name">┌─── Layer 3: User Preference ─────────────────────────────────┐</span><br>
+<span class="desc">│  个人偏好（深色模式、字体大小、动效开关、紧凑/舒适模式）        │</span><br>
+<span class="desc">│  → 由用户设置或 AI 推断                                       │</span><br>
+<span class="layer-name">└──────────────────────────────────────────────────────────────┘</span><br>
+<br>
+<span class="layer-name">最终渲染 = Base + Region Override + User Override</span>
+            </div>
+
+            <h3>Region Profile Schema</h3>
+            <div class="code-block">
+                <span class="label">Region Profile</span>
+<span class="bracket">{</span><br>
+&nbsp;&nbsp;<span class="key">"regionId"</span>: <span class="string">"SEA"</span>,<br>
+&nbsp;&nbsp;<span class="key">"displayName"</span>: <span class="string">"Southeast Asia"</span>,<br>
+&nbsp;&nbsp;<span class="key">"locales"</span>: [<span class="string">"th-TH"</span>, <span class="string">"vi-VN"</span>, <span class="string">"id-ID"</span>, <span class="string">"ms-MY"</span>],<br>
+<br>
+&nbsp;&nbsp;<span class="key">"layout"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"direction"</span>: <span class="string">"ltr"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"density"</span>: <span class="string">"comfortable"</span>,<span class="comment"> // compact | comfortable | spacious</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"cardColumns"</span>: <span class="number">2</span>,<span class="comment">            // 列表默认列数</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"imageRatio"</span>: <span class="string">"16:9"</span><span class="comment">       // 图片比例偏好</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+<br>
+&nbsp;&nbsp;<span class="key">"colors"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"promo"</span>: <span class="string">"#FF6B35"</span>,<span class="comment">        // 促销主色</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"promoGradient"</span>: <span class="string">"linear-gradient(135deg, #FF6B35, #FF3CAC)"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"urgency"</span>: <span class="string">"#E91E63"</span>,<span class="comment">      // 紧迫感色</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"trust"</span>: <span class="string">"#4CAF50"</span>,<span class="comment">        // 信任色（评分、认证）</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"background"</span>: <span class="string">"#FFFAF5"</span><span class="comment">    // 暖底色</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+<br>
+&nbsp;&nbsp;<span class="key">"typography"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"baseSize"</span>: <span class="number">15</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"lineHeight"</span>: <span class="number">1.6</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"priceSize"</span>: <span class="string">"2em"</span>,<span class="comment">        // 价格字号相对倍数</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"fontStack"</span>: <span class="string">"'Noto Sans Thai', system-ui"</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+<br>
+&nbsp;&nbsp;<span class="key">"promoStyle"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"discountDisplay"</span>: <span class="string">"badge"</span>,<span class="comment">  // badge | inline | banner</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"showOriginalPrice"</span>: <span class="boolean">true</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"showPercentOff"</span>: <span class="boolean">true</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"animateUrgency"</span>: <span class="boolean">true</span>,<span class="comment">    // 倒计时闪烁</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"showSocialProof"</span>: <span class="boolean">true</span><span class="comment">    // "X人已购买"</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+<br>
+&nbsp;&nbsp;<span class="key">"imageStyle"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"preferredContent"</span>: [<span class="string">"people"</span>, <span class="string">"scenery"</span>],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"borderRadius"</span>: <span class="number">16</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"overlay"</span>: <span class="string">"gradient-bottom"</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span><br>
+<span class="bracket">}</span>
+            </div>
+
+            <h3>不同区域的同一 Deal 卡片渲染差异</h3>
+            <div class="vs-box">
+                <div class="vs-item" style="border-color:#e74c3c;">
+                    <div class="vs-label" style="color:#e74c3c;">🇨🇳 中国大陆</div>
+                    <p style="font-size:0.85em;margin:0;">紧凑布局 · 红色促销标 · 大字价格 · 倒计时醒目 · "已售1823件" · 券面叠加显示</p>
+                </div>
+                <div class="vs-item" style="border-color:#3498db;">
+                    <div class="vs-label" style="color:#3498db;">🇺🇸 美国</div>
+                    <p style="font-size:0.85em;margin:0;">宽松留白 · 蓝灰色调 · 价格居右对齐 · 无倒计时 · 星级评分突出 · 文字链 CTA</p>
+                </div>
+            </div>
+            <div class="vs-box">
+                <div class="vs-item" style="border-color:#27ae60;">
+                    <div class="vs-label" style="color:#27ae60;">🇹🇭 泰国</div>
+                    <p style="font-size:0.85em;margin:0;">明亮渐变 · 大圆角卡片 · 动效 badge · 分期价格 · 网红图片 · 社交证据突出</p>
+                </div>
+                <div class="vs-item" style="border-color:#f39c12;">
+                    <div class="vs-label" style="color:#f39c12;">🇦🇪 阿联酋</div>
+                    <p style="font-size:0.85em;margin:0;">RTL 镜像布局 · 金色调 · 家庭场景 · 里程积分展示 · 阿拉伯字体加大行高 · 全宽 CTA</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- S18: Theme Resolution -->
+        <div class="section">
+            <div class="section-header"><div class="section-number">18</div><h2>主题解析流程与条件选择</h2></div>
+
+            <h3>LLM 如何选择 Region Profile</h3>
+            <div class="code-block">
+                <span class="label">Theme Resolution</span>
+<span class="comment">// LLM 生成时，Structure/DataModel 保持不变</span><br>
+<span class="comment">// 只有 Theme 层根据上下文条件做选择</span><br>
+<br>
+<span class="bracket">{</span><br>
+&nbsp;&nbsp;<span class="key">"themeResolution"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"strategy"</span>: <span class="string">"cascade"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"layers"</span>: <span class="bracket">[</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"source"</span>: <span class="string">"base"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"themeId"</span>: <span class="string">"tripcom-global-v3"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"source"</span>: <span class="string">"region"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"resolveBy"</span>: <span class="string">"context.locale"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"mapping"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"zh-CN"</span>: <span class="string">"region-china"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"ja-JP"</span>: <span class="string">"region-japan"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"th-TH"</span>: <span class="string">"region-sea"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"ar-AE"</span>: <span class="string">"region-mena"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"en-US"</span>: <span class="string">"region-west"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"*"</span>: <span class="string">"region-west"</span><span class="comment"> // fallback</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"source"</span>: <span class="string">"user"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"resolveBy"</span>: <span class="string">"context.userPreferences"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"tokens"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"colorScheme"</span>: <span class="string">"context.userPreferences.darkMode ? 'dark' : 'light'"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"fontSize"</span>: <span class="string">"context.userPreferences.fontSize || 'medium'"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"reduceMotion"</span>: <span class="string">"context.userPreferences.reduceMotion || false"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">]</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span><br>
+<span class="bracket">}</span>
+            </div>
+
+            <h3>结构不变、风格可变的关键设计</h3>
+            <div class="principle-grid">
+                <div class="principle-item"><h4>Structure 层无视觉信息</h4><p>组件树只描述"有什么"和"层级关系"，不包含颜色、间距、字号。同一 Structure 在中国和美国渲染完全不同的视觉。</p></div>
+                <div class="principle-item"><h4>Theme Token 而非硬编码值</h4><p>使用 <code>color.promo</code> 而非 <code>#FF0000</code>。Token 在不同 Region Profile 中解析为不同值。</p></div>
+                <div class="principle-item"><h4>条件组件可见性</h4><p>某些组件在特定区域才显示（如中东显示里程积分、中国显示券面、欧美显示评分细分）。通过 <code>visibility.condition</code> 控制。</p></div>
+                <div class="principle-item"><h4>布局方向自适应</h4><p>RTL 区域自动镜像 Row 组件的 children 顺序，无需 LLM 重新生成结构。客户端 renderer 处理。</p></div>
+            </div>
+
+            <h3>条件可见性示例</h3>
+            <div class="code-block">
+                <span class="label">Conditional Visibility</span>
+<span class="comment">// 同一模板中，不同区域展示不同元素</span><br>
+<span class="bracket">[</span><br>
+&nbsp;&nbsp;<span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"id"</span>: <span class="string">"mileage-badge"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"component"</span>: <span class="string">"Badge"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"binding"</span>: <span class="string">"$.mileageEarn"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"visibility"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"condition"</span>: <span class="string">"context.region in ['MENA', 'SEA']"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+&nbsp;&nbsp;<span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"id"</span>: <span class="string">"coupon-stack"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"component"</span>: <span class="string">"CouponOverlay"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"binding"</span>: <span class="string">"$.coupons"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"visibility"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"condition"</span>: <span class="string">"context.region == 'CN'"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+&nbsp;&nbsp;<span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"id"</span>: <span class="string">"rating-breakdown"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"component"</span>: <span class="string">"RatingDetail"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"binding"</span>: <span class="string">"$.ratings"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"visibility"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"condition"</span>: <span class="string">"context.region in ['WEST', 'JP']"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span><br>
+<span class="bracket">]</span>
+            </div>
+        </div>
+
+        <!-- S19: Preference Signals -->
+        <div class="section">
+            <div class="section-header"><div class="section-number">19</div><h2>用户偏好信号与 AI 推断</h2></div>
+
+            <div class="card card-accent">
+                <p style="margin:0;">除了区域预设，A2UI 还可以根据用户行为信号<strong>动态推断</strong>视觉偏好，实现"千人千面"的视觉体验——不只是内容个性化，视觉风格也个性化。</p>
+            </div>
+
+            <h3>偏好信号来源</h3>
+            <table>
+                <tr><th>信号类型</th><th>来源</th><th>影响的 Theme Token</th><th>示例</th></tr>
+                <tr><td><strong>显式设置</strong></td><td>用户主动选择</td><td>colorScheme, fontSize, reduceMotion</td><td>开启深色模式</td></tr>
+                <tr><td><strong>设备信号</strong></td><td>系统 API</td><td>density, fontSize, colorScheme</td><td>系统大字体模式</td></tr>
+                <tr><td><strong>行为推断</strong></td><td>埋点分析</td><td>density, promoStyle, imageStyle</td><td>频繁缩放→增大字号</td></tr>
+                <tr><td><strong>A/B 归因</strong></td><td>实验平台</td><td>任意 Token</td><td>紧凑布局组 CTR 更高</td></tr>
+                <tr><td><strong>时间上下文</strong></td><td>当前时间</td><td>colorScheme, colors.background</td><td>夜间自动暗色</td></tr>
+            </table>
+
+            <h3>AI 推断偏好的 Context Schema</h3>
+            <div class="code-block">
+                <span class="label">User Context for Theme</span>
+<span class="bracket">{</span><br>
+&nbsp;&nbsp;<span class="key">"context"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"locale"</span>: <span class="string">"th-TH"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"region"</span>: <span class="string">"SEA"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"device"</span>: <span class="bracket">{</span> <span class="key">"type"</span>: <span class="string">"mobile"</span>, <span class="key">"screenWidth"</span>: <span class="number">390</span>, <span class="key">"pixelRatio"</span>: <span class="number">3</span> <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"time"</span>: <span class="bracket">{</span> <span class="key">"hour"</span>: <span class="number">22</span>, <span class="key">"isWeekend"</span>: <span class="boolean">true</span> <span class="bracket">}</span>,<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"userPreferences"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"darkMode"</span>: <span class="boolean">true</span>,<span class="comment">           // 显式设置</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"fontSize"</span>: <span class="string">"large"</span>,<span class="comment">        // 设备信号</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"reduceMotion"</span>: <span class="boolean">false</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"preferredDensity"</span>: <span class="string">"comfortable"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"inferredStyle"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"pricesSensitivity"</span>: <span class="string">"high"</span>,<span class="comment">  // 行为推断：价格敏感</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"visualComplexity"</span>: <span class="string">"medium"</span>,<span class="comment">// 行为推断：不喜欢过度装饰</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"trustSignals"</span>: <span class="string">"important"</span>,<span class="comment"> // 常看评分→突出信任信号</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"engagementType"</span>: <span class="string">"scanner"</span><span class="comment"> // 快速浏览型→紧凑布局</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span><br>
+<span class="bracket">}</span>
+            </div>
+
+            <h3>推断如何影响渲染</h3>
+            <div class="principle-grid">
+                <div class="principle-item"><h4>价格敏感用户</h4><p>放大价格 Token（priceSize: 2.5em）；促销 badge 加大；划线价对比更突出；显示"比平时低X%"。</p></div>
+                <div class="principle-item"><h4>品质导向用户</h4><p>弱化价格视觉权重；突出评分和图片；显示"精选"标签；隐藏社交证据噪音。</p></div>
+                <div class="principle-item"><h4>快速浏览型 (Scanner)</h4><p>density: compact；减少描述文本行数；CTA 更突出；首屏放更多卡片。</p></div>
+                <div class="principle-item"><h4>深度研究型 (Researcher)</h4><p>density: spacious；展开更多详情；显示评分细分；增加比较功能入口。</p></div>
+            </div>
+        </div>
+
+        <!-- S20: Training for Global -->
+        <div class="section">
+            <div class="section-header"><div class="section-number">20</div><h2>全球化视觉适配的训练策略</h2></div>
+
+            <h3>训练数据增强</h3>
+            <table>
+                <tr><th>训练阶段</th><th>输入增强</th><th>期望输出</th><th>评估标准</th></tr>
+                <tr><td><strong>Theme 选择</strong></td><td>同一需求 + 不同 locale</td><td>正确选择 Region Profile</td><td>region-locale 映射准确</td></tr>
+                <tr><td><strong>条件可见性</strong></td><td>需求 + region context</td><td>正确设置 visibility.condition</td><td>区域相关组件正确显隐</td></tr>
+                <tr><td><strong>密度适配</strong></td><td>同一内容 + density 变化</td><td>调整 cardColumns / imageRatio</td><td>不同密度下布局合理</td></tr>
+                <tr><td><strong>RTL 处理</strong></td><td>RTL locale 请求</td><td>不改 Structure，只设 direction token</td><td>不尝试手动镜像组件顺序</td></tr>
+                <tr><td><strong>偏好推断</strong></td><td>用户行为序列</td><td>inferredStyle 字段推断</td><td>推断与行为一致</td></tr>
+            </table>
+
+            <h3>关键训练对示例</h3>
+            <div class="code-block">
+                <span class="label">Training Pair: Same Intent, Different Region</span>
+<span class="comment">// Input</span><br>
+<span class="bracket">{</span><br>
+&nbsp;&nbsp;<span class="key">"intent"</span>: <span class="string">"展示3个限时酒店优惠"</span>,<br>
+&nbsp;&nbsp;<span class="key">"catalog"</span>: <span class="string">"deals-v1"</span>,<br>
+&nbsp;&nbsp;<span class="key">"context"</span>: <span class="bracket">{</span> <span class="key">"locale"</span>: <span class="string">"ar-AE"</span>, <span class="key">"region"</span>: <span class="string">"MENA"</span> <span class="bracket">}</span><br>
+<span class="bracket">}</span><br>
+<br>
+<span class="comment">// Expected Output (LLM should NOT mirror structure)</span><br>
+<span class="bracket">{</span><br>
+&nbsp;&nbsp;<span class="key">"structure"</span>: <span class="bracket">{</span> <span class="comment">/* 与其他区域完全相同 */</span> <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;<span class="key">"theme"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"extends"</span>: <span class="string">"region-mena"</span>,<span class="comment"> // ✓ 选对区域</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"overrides"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"layout.direction"</span>: <span class="string">"rtl"</span>,<span class="comment"> // ✓ 设置方向</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"colors.promo"</span>: <span class="string">"#D4AF37"</span><span class="comment"> // ✓ 金色调</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+&nbsp;&nbsp;<span class="key">"conditionalComponents"</span>: <span class="bracket">[</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"mileage-badge"</span>, <span class="key">"visible"</span>: <span class="boolean">true</span> <span class="bracket">}</span>,<span class="comment">  // ✓ MENA 显示里程</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"coupon-stack"</span>, <span class="key">"visible"</span>: <span class="boolean">false</span> <span class="bracket">}</span><span class="comment">  // ✓ 非CN隐藏券面</span><br>
+&nbsp;&nbsp;<span class="bracket">]</span><br>
+<span class="bracket">}</span>
+            </div>
+
+            <div class="verdict">
+                <h3>核心原则</h3>
+                <p><strong>Structure 全球统一 · Theme 区域分化 · Preference 个人覆盖</strong><br><br>
+                LLM 不需要为每个区域生成不同的组件树——它只需要学会：<br>
+                ① 选对 Region Profile &nbsp;&nbsp;② 设对条件可见性 &nbsp;&nbsp;③ 不硬编码视觉值<br><br>
+                训练目标：同一 intent 在 5 个区域的输出，Structure 完全一致，Theme 引用不同。</p>
             </div>
         </div>
 

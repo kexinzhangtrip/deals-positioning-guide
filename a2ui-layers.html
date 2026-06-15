@@ -280,6 +280,12 @@
                 <li>完整示例：一个 Deal 卡片的五层拆解</li>
                 <li>训练数据格式建议</li>
                 <li>设计原则与约束</li>
+                <li>页面级架构：从整体视角看 A2UI</li>
+                <li>组件数量约束与分屏策略</li>
+                <li>完整页面示例：Deals 首页分解</li>
+                <li>LLM 生成策略：分步生成 vs 一次生成</li>
+                <li>约束规则与验证清单</li>
+                <li>页面级分层对训练的意义</li>
             </ol>
         </div>
 
@@ -742,6 +748,346 @@
             <div class="verdict">
                 <h3>总结：一个组件 = 五张卡片</h3>
                 <p>Structure（骨架）+ Data（血肉）+ Catalog（边界）+ Action（神经）+ Theme（皮肤）<br><br>训练时分层拆解，生成时按需组合。每一层都可以独立变更、独立验证、独立缓存。</p>
+            </div>
+        </div>
+
+        <!-- S11: Page Level Architecture -->
+        <div class="section">
+            <div class="section-header"><div class="section-number">11</div><h2>页面级架构：从整体视角看 A2UI</h2></div>
+
+            <div class="card card-accent">
+                <p style="margin:0;">单个组件是"砖"，页面级设计是"建筑图纸"。A2UI 在页面层面引入 <strong>Surface（画面）</strong> 概念——一个页面由多个 Surface 组成，每个 Surface 独立流式生成、独立更新。</p>
+            </div>
+
+            <h3>页面 = 多 Surface 编排</h3>
+            <div class="layer-diagram">
+<span class="layer-name">┌─── Page ─────────────────────────────────────────────────────┐</span><br>
+<span class="layer-name">│                                                               │</span><br>
+<span class="layer-name">│  ┌─ Surface: nav-bar ────────────────────────────────────┐    │</span><br>
+<span class="layer-name">│  │  Logo · Search · UserAvatar     </span><span class="desc">(3 components)</span><span class="layer-name">       │    │</span><br>
+<span class="layer-name">│  └────────────────────────────────────────────────────────┘    │</span><br>
+<span class="layer-name">│                                                               │</span><br>
+<span class="layer-name">│  ┌─ Surface: flash-deals ────────────────────────────────┐    │</span><br>
+<span class="layer-name">│  │  Countdown · HScroll[Card×3]   </span><span class="desc">(8-12 components)</span><span class="layer-name">    │    │</span><br>
+<span class="layer-name">│  └────────────────────────────────────────────────────────┘    │</span><br>
+<span class="layer-name">│                                                               │</span><br>
+<span class="layer-name">│  ┌─ Surface: discover ───────────────────────────────────┐    │</span><br>
+<span class="layer-name">│  │  SectionTitle · Grid[DestCard×6]</span><span class="desc">(15-20 components)</span><span class="layer-name">   │    │</span><br>
+<span class="layer-name">│  └────────────────────────────────────────────────────────┘    │</span><br>
+<span class="layer-name">│                                                               │</span><br>
+<span class="layer-name">│  ┌─ Surface: for-you ────────────────────────────────────┐    │</span><br>
+<span class="layer-name">│  │  SectionTitle · VList[DealCard×N]</span><span class="desc">(动态加载)</span><span class="layer-name">        │    │</span><br>
+<span class="layer-name">│  └────────────────────────────────────────────────────────┘    │</span><br>
+<span class="layer-name">│                                                               │</span><br>
+<span class="layer-name">└───────────────────────────────────────────────────────────────┘</span><br>
+<br>
+<span class="arrow">每个 Surface 独立生成 · 独立更新 · 独立销毁</span><br>
+<span class="desc">页面编排层决定 Surface 的顺序和可见条件</span>
+            </div>
+
+            <h3>页面级分层</h3>
+            <table>
+                <tr><th>层级</th><th>职责</th><th>关键字段</th></tr>
+                <tr><td><strong>Page Layout</strong></td><td>定义 Surface 排列顺序和加载策略</td><td><code>surfaces[]</code>, <code>loadStrategy</code></td></tr>
+                <tr><td><strong>Surface</strong></td><td>一个独立 UI 区块，含自己的组件树和数据</td><td><code>surfaceId</code>, <code>components[]</code></td></tr>
+                <tr><td><strong>Component</strong></td><td>最小 UI 单元</td><td><code>id</code>, <code>component</code>, <code>children</code></td></tr>
+                <tr><td><strong>Slot/Repeat</strong></td><td>动态列表中的模板（一个模板 × N 数据）</td><td><code>template</code>, <code>dataSource</code>, <code>maxItems</code></td></tr>
+            </table>
+
+            <h3>页面编排 Schema</h3>
+            <div class="code-block">
+                <span class="label">Page Layout</span>
+<span class="bracket">{</span><br>
+&nbsp;&nbsp;<span class="key">"pageId"</span>: <span class="string">"deals-main"</span>,<br>
+&nbsp;&nbsp;<span class="key">"layout"</span>: <span class="string">"scroll-vertical"</span>,<br>
+&nbsp;&nbsp;<span class="key">"surfaces"</span>: <span class="bracket">[</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"surfaceId"</span>: <span class="string">"nav-bar"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"position"</span>: <span class="string">"sticky-top"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"loadStrategy"</span>: <span class="string">"immediate"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"surfaceId"</span>: <span class="string">"flash-deals"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"position"</span>: <span class="string">"flow"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"loadStrategy"</span>: <span class="string">"immediate"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"visibility"</span>: <span class="bracket">{</span> <span class="key">"condition"</span>: <span class="string">"hasActiveFlashDeals"</span> <span class="bracket">}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"surfaceId"</span>: <span class="string">"discover"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"position"</span>: <span class="string">"flow"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"loadStrategy"</span>: <span class="string">"immediate"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"surfaceId"</span>: <span class="string">"for-you"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"position"</span>: <span class="string">"flow"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"loadStrategy"</span>: <span class="string">"lazy"</span>,<span class="comment"> // 滚动到视口时才加载</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"pagination"</span>: <span class="bracket">{</span> <span class="key">"type"</span>: <span class="string">"infinite-scroll"</span>, <span class="key">"pageSize"</span>: <span class="number">10</span> <span class="bracket">}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span><br>
+&nbsp;&nbsp;<span class="bracket">]</span><br>
+<span class="bracket">}</span>
+            </div>
+        </div>
+
+        <!-- S12: Component Count -->
+        <div class="section">
+            <div class="section-header"><div class="section-number">12</div><h2>组件数量约束与分屏策略</h2></div>
+
+            <div class="card card-warning">
+                <p style="margin:0;">LLM 一次生成的 token 有限，组件数量直接影响生成质量和渲染性能。需要对<strong>每个 Surface 的组件数量</strong>设置上界。</p>
+            </div>
+
+            <h3>组件数量分级</h3>
+            <table>
+                <tr><th>Surface 复杂度</th><th>组件数上限</th><th>适用场景</th><th>Token 预估</th></tr>
+                <tr><td><strong>轻量级</strong></td><td>3-8 个</td><td>导航栏、工具栏、Toast 提示</td><td>~200-500 tokens</td></tr>
+                <tr><td><strong>标准级</strong></td><td>8-20 个</td><td>卡片列表区块、表单、详情展示</td><td>~500-1500 tokens</td></tr>
+                <tr><td><strong>重量级</strong></td><td>20-40 个</td><td>复杂仪表盘、多标签面板</td><td>~1500-3000 tokens</td></tr>
+                <tr><td><span style="color:#e74c3c;font-weight:600;">超限 ⚠️</span></td><td>> 40 个</td><td>必须拆分为多 Surface</td><td>→ 拆分</td></tr>
+            </table>
+
+            <h3>为什么需要上限？</h3>
+            <div class="principle-grid">
+                <div class="principle-item"><h4>LLM 生成质量</h4><p>组件超过 30-40 个时，ID 引用错误率显著上升（括号不匹配、children 指向不存在的 ID）。</p></div>
+                <div class="principle-item"><h4>流式渲染性能</h4><p>单 Surface 组件过多导致首次有意义绘制 (FMP) 延迟。拆分后首屏 Surface 可立即渲染。</p></div>
+                <div class="principle-item"><h4>增量更新效率</h4><p>Surface 粒度越细，局部更新影响范围越小。整页一个 Surface = 任何变化都要 diff 全树。</p></div>
+                <div class="principle-item"><h4>训练数据标注</h4><p>标注者在 20 个组件内可以完整验证结构正确性；超过后需要工具辅助。</p></div>
+            </div>
+
+            <h3>Repeat/Template 模式：组件模板 × 数据列表</h3>
+            <div class="card card-blue">
+                <p>列表场景（10 个酒店卡片）不应该生成 10 × 7 = 70 个组件。应该定义 <strong>1 个模板</strong> + <strong>1 个数据数组</strong>，客户端负责重复渲染。</p>
+            </div>
+
+            <div class="code-block">
+                <span class="label">Repeat Pattern</span>
+<span class="bracket">{</span><br>
+&nbsp;&nbsp;<span class="key">"id"</span>: <span class="string">"deal-list"</span>,<br>
+&nbsp;&nbsp;<span class="key">"component"</span>: <span class="string">"List"</span>,<br>
+&nbsp;&nbsp;<span class="key">"direction"</span>: <span class="string">"vertical"</span>,<br>
+&nbsp;&nbsp;<span class="key">"repeat"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"dataSource"</span>: <span class="string">"/deals"</span>,<span class="comment">        // Data Model 中的数组</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"maxItems"</span>: <span class="number">10</span>,<span class="comment">                // 单次最多渲染数</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"template"</span>: <span class="string">"deal-card-tpl"</span><span class="comment">  // 引用模板 Surface</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span><br>
+<span class="bracket">}</span><br>
+<br>
+<span class="comment">// 模板定义（只定义一次，复用 N 次）</span><br>
+<span class="bracket">{</span><br>
+&nbsp;&nbsp;<span class="key">"templateId"</span>: <span class="string">"deal-card-tpl"</span>,<br>
+&nbsp;&nbsp;<span class="key">"components"</span>: <span class="bracket">[</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"card"</span>, <span class="key">"component"</span>: <span class="string">"Card"</span>, <span class="key">"children"</span>: [<span class="string">"img"</span>, <span class="string">"body"</span>] <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"img"</span>, <span class="key">"component"</span>: <span class="string">"Image"</span>, <span class="key">"binding"</span>: <span class="string">"$.image"</span> <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"body"</span>, <span class="key">"component"</span>: <span class="string">"Column"</span>, <span class="key">"children"</span>: [<span class="string">"title"</span>, <span class="string">"price"</span>] <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"title"</span>, <span class="key">"component"</span>: <span class="string">"Text"</span>, <span class="key">"binding"</span>: <span class="string">"$.name"</span> <span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span> <span class="key">"id"</span>: <span class="string">"price"</span>, <span class="key">"component"</span>: <span class="string">"PriceTag"</span>, <span class="key">"bindings"</span>: <span class="bracket">{</span> <span class="key">"current"</span>: <span class="string">"$.currentPrice"</span> <span class="bracket">}</span> <span class="bracket">}</span><br>
+&nbsp;&nbsp;<span class="bracket">]</span><br>
+<span class="bracket">}</span><br>
+<br>
+<span class="comment">// 效果：模板 5 个组件 × 10 条数据 = 客户端渲染 50 个实例</span><br>
+<span class="comment">// 但 LLM 只需要生成 5 个组件定义 ✓</span>
+            </div>
+
+            <div class="vs-box">
+                <div class="vs-item bad"><div class="vs-label">❌ 逐个生成</div><p>10 个卡片 × 7 组件 = <strong>70 个组件</strong></p><p style="font-size:0.85em;color:#888;">Token 爆炸 · ID 冲突 · 难以维护</p></div>
+                <div class="vs-item good"><div class="vs-label">✓ 模板 + 数据</div><p>1 个模板 (5组件) + 数据数组 = <strong>5 个组件</strong></p><p style="font-size:0.85em;color:#555;">高效 · 一致 · 数据驱动</p></div>
+            </div>
+        </div>
+
+        <!-- S13: Page Composition Example -->
+        <div class="section">
+            <div class="section-header"><div class="section-number">13</div><h2>完整页面示例：Deals 首页分解</h2></div>
+
+            <div class="card card-accent">
+                <p style="margin:0;">以 Deals 优惠频道首页为例，展示一个完整页面如何被拆解为多 Surface、受组件数量约束、使用模板复用。</p>
+            </div>
+
+            <h3>页面组件预算</h3>
+            <table>
+                <tr><th>Surface</th><th>模板组件数</th><th>数据驱动实例数</th><th>实际渲染组件数</th><th>加载策略</th></tr>
+                <tr><td><strong>nav-bar</strong></td><td>4</td><td>—</td><td>4</td><td>immediate</td></tr>
+                <tr><td><strong>trust-banner</strong></td><td>3</td><td>—</td><td>3</td><td>immediate</td></tr>
+                <tr><td><strong>flash-deals</strong></td><td>6 (模板)</td><td>×3 卡片</td><td>19</td><td>immediate</td></tr>
+                <tr><td><strong>discover</strong></td><td>5 (模板)</td><td>×6 目的地</td><td>32</td><td>immediate</td></tr>
+                <tr><td><strong>for-you</strong></td><td>7 (模板)</td><td>×10 Deal</td><td>71</td><td>lazy + pagination</td></tr>
+                <tr style="font-weight:600;background:#f0f4ff;">
+                    <td>合计</td><td><strong>25 个（LLM 生成）</strong></td><td>—</td><td><strong>~129 个（客户端渲染）</strong></td><td>—</td></tr>
+            </table>
+
+            <div class="card card-success">
+                <h4>关键洞察</h4>
+                <p style="margin:0;">LLM 只需要生成 <strong>~25 个组件定义</strong>（5 个 Surface × 平均 5 个模板组件）。客户端通过 repeat + data binding 扩展为 129 个渲染实例。这是 A2UI 页面级设计的核心效率来源。</p>
+            </div>
+
+            <h3>完整页面 Schema</h3>
+            <div class="code-block">
+                <span class="label">Full Page Definition</span>
+<span class="bracket">{</span><br>
+&nbsp;&nbsp;<span class="key">"version"</span>: <span class="string">"v0.9"</span>,<br>
+&nbsp;&nbsp;<span class="key">"page"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"pageId"</span>: <span class="string">"deals-home"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"title"</span>: <span class="string">"优惠频道"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"themeId"</span>: <span class="string">"deals-summer-2026"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"catalogId"</span>: <span class="string">"deals-v1"</span>,<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// 页面级配置</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"config"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"maxSurfaces"</span>: <span class="number">8</span>,<span class="comment">             // 单页最多 Surface 数</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"maxComponentsPerSurface"</span>: <span class="number">30</span>,<span class="comment"> // 每 Surface 组件上限</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"maxTotalTemplateComponents"</span>: <span class="number">50</span>,<span class="comment"> // LLM 总生成量上限</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"maxRepeatItems"</span>: <span class="number">20</span>,<span class="comment">         // 单列表最大重复数</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"maxNestingDepth"</span>: <span class="number">4</span><span class="comment">          // 组件嵌套深度上限</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// Surface 编排</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"surfaces"</span>: <span class="bracket">[</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"surfaceId"</span>: <span class="string">"nav-bar"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"position"</span>: <span class="string">"sticky-top"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"priority"</span>: <span class="number">1</span>,<span class="comment"> // 生成顺序</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"loadStrategy"</span>: <span class="string">"immediate"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"surfaceId"</span>: <span class="string">"flash-deals"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"position"</span>: <span class="string">"flow"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"priority"</span>: <span class="number">2</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"loadStrategy"</span>: <span class="string">"immediate"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"visibility"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"condition"</span>: <span class="string">"data.flashDeals.length > 0"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"ttl"</span>: <span class="number">60</span><span class="comment"> // 60秒后自动刷新数据</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"surfaceId"</span>: <span class="string">"discover"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"position"</span>: <span class="string">"flow"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"priority"</span>: <span class="number">3</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"loadStrategy"</span>: <span class="string">"immediate"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"surfaceId"</span>: <span class="string">"for-you"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"position"</span>: <span class="string">"flow"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"priority"</span>: <span class="number">4</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"loadStrategy"</span>: <span class="string">"lazy"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"pagination"</span>: <span class="bracket">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"type"</span>: <span class="string">"infinite-scroll"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"pageSize"</span>: <span class="number">10</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"maxPages"</span>: <span class="number">5</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="bracket">]</span><br>
+&nbsp;&nbsp;<span class="bracket">}</span><br>
+<span class="bracket">}</span>
+            </div>
+        </div>
+
+        <!-- S14: Generation Strategy -->
+        <div class="section">
+            <div class="section-header"><div class="section-number">14</div><h2>LLM 生成策略：分步生成 vs 一次生成</h2></div>
+
+            <div class="card card-accent">
+                <p style="margin:0;">一个完整页面不应该让 LLM 一次性生成全部 Surface。应该采用<strong>分步编排</strong>策略。</p>
+            </div>
+
+            <h3>三种生成模式</h3>
+            <table>
+                <tr><th>模式</th><th>描述</th><th>适用场景</th><th>组件上限</th></tr>
+                <tr><td><strong>Single-shot</strong></td><td>一次生成整个 Surface</td><td>简单区块（nav、banner）</td><td>≤ 10</td></tr>
+                <tr><td><strong>Sequential</strong></td><td>按 priority 逐个生成 Surface</td><td>首屏加载（flash → discover）</td><td>≤ 30/Surface</td></tr>
+                <tr><td><strong>On-demand</strong></td><td>用户滚动/交互时才生成</td><td>瀑布流（for-you）</td><td>每批 ≤ 20</td></tr>
+            </table>
+
+            <h3>生成流程</h3>
+            <div class="layer-diagram">
+<span class="layer-name">Agent 收到请求："展示 Deals 首页"</span><br>
+<br>
+<span class="arrow">Step 1:</span> <span class="desc">生成 Page Layout（Surface 编排）</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;→ 输出：4 个 Surface 定义 + 加载策略<br>
+&nbsp;&nbsp;&nbsp;&nbsp;→ token cost: ~200<br>
+<br>
+<span class="arrow">Step 2:</span> <span class="desc">并行生成 immediate Surface</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;→ nav-bar: 4 组件 (~150 tokens)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;→ flash-deals: 6 组件模板 (~400 tokens)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;→ discover: 5 组件模板 (~350 tokens)<br>
+<br>
+<span class="arrow">Step 3:</span> <span class="desc">用户滚动到 for-you 区域时</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;→ for-you: 7 组件模板 (~500 tokens)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;→ 首批 10 条数据绑定<br>
+<br>
+<span class="arrow">Step 4:</span> <span class="desc">继续滚动时</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;→ 只发 updateDataModel（追加数据）<br>
+&nbsp;&nbsp;&nbsp;&nbsp;→ 复用已有模板，零组件生成<br>
+<br>
+<span class="layer-name">总计 LLM 生成：~22 个组件 + ~1600 tokens</span><br>
+<span class="layer-name">客户端渲染：~129 个组件实例</span>
+            </div>
+        </div>
+
+        <!-- S15: Constraints & Validation -->
+        <div class="section">
+            <div class="section-header"><div class="section-number">15</div><h2>约束规则与验证清单</h2></div>
+
+            <h3>页面级硬约束（用于训练 validation）</h3>
+            <table>
+                <tr><th>约束项</th><th>上限</th><th>违规处理</th></tr>
+                <tr><td>单 Surface 组件数</td><td>30</td><td>拒绝，要求拆分</td></tr>
+                <tr><td>页面 Surface 总数</td><td>8</td><td>拒绝，要求合并</td></tr>
+                <tr><td>LLM 单次生成组件总量</td><td>50</td><td>截断 + 分步提示</td></tr>
+                <tr><td>组件嵌套深度</td><td>4 层</td><td>拒绝，要求扁平化</td></tr>
+                <tr><td>单 repeat 列表项数</td><td>20</td><td>强制分页</td></tr>
+                <tr><td>ID 命名长度</td><td>32 字符</td><td>截断警告</td></tr>
+                <tr><td>单组件 binding 数</td><td>10</td><td>警告，建议拆分</td></tr>
+                <tr><td>Action payload 字段数</td><td>8</td><td>警告，建议精简</td></tr>
+            </table>
+
+            <h3>训练验证清单</h3>
+            <div class="card card-blue">
+                <h4>结构验证</h4>
+                <ul class="checklist">
+                    <li>所有 <code>children</code> 引用的 ID 必须在同一 Surface 内存在</li>
+                    <li>无环引用（A → B → A）</li>
+                    <li>有且只有一个 root 组件（无父引用）</li>
+                    <li>所有 <code>component</code> 值在 Catalog 中存在</li>
+                    <li>ID 全局唯一（跨 Surface 也不能重复）</li>
+                </ul>
+            </div>
+            <div class="card card-success">
+                <h4>数据验证</h4>
+                <ul class="checklist">
+                    <li>所有 <code>binding</code> 路径在 Data Model 中可达</li>
+                    <li>repeat 的 <code>dataSource</code> 指向数组类型</li>
+                    <li>模板内 binding 使用 <code>$.</code> 相对路径</li>
+                    <li>无未绑定的动态字段（text 或 binding 二选一）</li>
+                </ul>
+            </div>
+            <div class="card card-purple">
+                <h4>性能验证</h4>
+                <ul class="checklist">
+                    <li>首屏 Surface（immediate）组件总数 ≤ 40</li>
+                    <li>lazy Surface 不在首次生成中出现</li>
+                    <li>无单 Surface 超过 30 组件</li>
+                    <li>嵌套深度 ≤ 4（root 算第 1 层）</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- S16: Training Impact -->
+        <div class="section">
+            <div class="section-header"><div class="section-number">16</div><h2>页面级分层对训练的意义</h2></div>
+
+            <table>
+                <tr><th>训练阶段</th><th>输入</th><th>输出</th><th>评估标准</th></tr>
+                <tr><td><strong>Phase 1: 页面规划</strong></td><td>需求描述 + Catalog</td><td>Page Layout（Surface 编排）</td><td>Surface 划分合理；加载策略正确</td></tr>
+                <tr><td><strong>Phase 2: Surface 生成</strong></td><td>单 Surface 需求 + 数据模型</td><td>组件树 + binding</td><td>组件数 ≤ 上限；结构验证通过</td></tr>
+                <tr><td><strong>Phase 3: 模板设计</strong></td><td>列表场景描述</td><td>template + repeat 定义</td><td>用模板复用而非逐个生成</td></tr>
+                <tr><td><strong>Phase 4: 增量更新</strong></td><td>状态变化描述</td><td>updateDataModel / updateComponents</td><td>最小变更集；不重建整树</td></tr>
+                <tr><td><strong>Phase 5: 端到端</strong></td><td>完整页面需求</td><td>分步生成完整页面</td><td>遵守所有约束；渲染后可用</td></tr>
+            </table>
+
+            <div class="verdict">
+                <h3>核心公式</h3>
+                <p><strong>一个页面 = N 个 Surface × 每 Surface M 个模板组件 × Data 驱动 K 个实例</strong><br><br>
+                LLM 生成量 = N × M（通常 20-50）<br>
+                实际渲染量 = Σ(M<sub>i</sub> × K<sub>i</sub>)（可达数百）<br><br>
+                训练目标：让 LLM 学会"用最少的模板组件覆盖最多的 UI 实例"。</p>
             </div>
         </div>
 
